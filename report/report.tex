@@ -1,0 +1,544 @@
+\documentclass[sigconf,nonacm]{acmart}
+
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage{xcolor}
+\usepackage{url}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  frame=single,
+  columns=fullflexible,
+  backgroundcolor=\color{gray!8},
+  rulecolor=\color{gray!40}
+}
+
+%% -----------------------------------------------------------
+%% Preamble metadata (acmart reads these before \begin{document})
+%% -----------------------------------------------------------
+\title{WiFi-Based Automated Classroom Attendance
+       Using a Commodity Android Smartphone}
+
+\author{Vivek Barhate}
+\affiliation{%
+  \institution{George Mason University}
+  \department{Department of Computer Science}
+  \country{USA}}
+
+\author{Preshita Bhortake}
+\affiliation{%
+  \institution{George Mason University}
+  \department{Department of Computer Science}
+  \country{USA}}
+
+\begin{abstract}
+Manual attendance in large classrooms is slow, error-prone, and
+vulnerable to proxy marking.  This paper presents a self-contained,
+privacy-preserving attendance system built from a single commodity
+Android smartphone acting as a mobile WiFi hotspot.  Students connect
+to the hotspot and check in through a captive-portal web page ---
+no dedicated app is required on the student device.  An ICMP
+ping-sweep engine running on the professor's phone continuously tracks
+device associations and measures presence duration; JavaScript
+heartbeats from the student browser provide an application-layer
+presence signal.  A SHA-256 token derived from the client IP and a
+per-session random salt replaces every raw IP and MAC address in the
+database, providing strong pseudonymisation.  Two server-side guards
+prevent proxy check-in: each device may check in only once per
+session, and each roll number may appear only once per session.  A
+FastAPI/SQLite backend provides session management, live occupancy,
+and CSV export.  End-to-end tests confirm 8/8 router-app flows and
+12/12 backend flows; a 35-student concurrent load test shows median
+heartbeat latency below 15~ms.
+\end{abstract}
+
+\keywords{WiFi attendance, captive portal, Android hotspot, ping sweep,
+  privacy, NanoHTTPD, FastAPI}
+
+%% -----------------------------------------------------------
+\begin{document}
+\maketitle
+%% -----------------------------------------------------------
+
+%% -----------------------------------------------------------
+\section{Introduction}
+%% -----------------------------------------------------------
+
+Taking attendance in large university classrooms is a persistent
+administrative burden.  Sign-in sheets are trivially forged through
+proxy marking.  QR-code systems require individual scanning, which
+disrupts the start of class.  Dedicated RFID or Bluetooth hardware
+requires procurement budgets that many institutions cannot sustain.
+
+WiFi offers a compelling alternative: every student already carries a
+smartphone, and connecting to the classroom network is a natural,
+low-friction indicator of physical presence.  Prior work has explored
+802.11 probe-request sniffing~\cite{demir2014} and router association
+tables~\cite{hwang2017}; however, these approaches require
+infrastructure-mode access points or passive monitoring hardware that
+collects raw MAC addresses, raising privacy concerns.
+
+This project builds a fully self-contained attendance system with the
+following properties.
+
+\begin{itemize}
+  \item Runs on \emph{one} commodity Android smartphone --- the
+        professor's phone acts as both the WiFi hotspot and the
+        attendance server.
+  \item No dedicated app is needed on the student's device; any
+        smartphone browser suffices.
+  \item No internet connection is required during class.
+  \item No IP or MAC address is ever stored; all tracking uses
+        short-lived, session-scoped anonymous tokens.
+  \item Two independent server-side guards prevent proxy check-in
+        without any additional hardware.
+\end{itemize}
+
+%% -----------------------------------------------------------
+\section{System Architecture}
+%% -----------------------------------------------------------
+
+The system has three logical tiers: the \emph{Router App} on the
+professor's phone, the \emph{FastAPI backend} on a laptop on the same
+LAN, and the student's standard \emph{web browser}.
+
+\subsection{Data Flow Overview}
+
+The sequence below summarises an end-to-end session.
+
+\begin{enumerate}
+  \item The professor starts a session in the Router App, which spins
+        up an Android \texttt{LocalOnly\-Hotspot} and the embedded
+        NanoHTTPD server on port 8080.
+  \item The student connects to the hotspot.  On many devices the OS
+        opens the captive-portal page automatically; otherwise the
+        student navigates to \texttt{http://<hotspot-ip>:8080}
+        manually.
+  \item The student submits their roll number.  The server validates it
+        against the roster, runs the two anti-proxy guards, computes a
+        session-scoped token, writes a \texttt{check\_in} row to the
+        local Room database, and redirects to a success page.
+  \item The success page runs a JavaScript interval that POSTs
+        \{\texttt{token}, \texttt{session\_id}\} to
+        \texttt{/heartbeat} every 30~s, keeping a \texttt{presence\_log}
+        row updated as long as the page remains open.
+  \item In parallel, a ping-sweep coroutine scans the hotspot subnet
+        every 5~s, detects associated IPs, and upserts
+        \texttt{presence\_log} rows for every responding device.
+  \item At session end, \texttt{AttendanceEngine} joins
+        \texttt{check\_in} and \texttt{presence\_log} to compute the
+        attendance status for every student in the roster.
+\end{enumerate}
+
+\subsection{Router App (Professor's Phone)}
+
+The Router App is a Kotlin/Android application.  It uses
+\texttt{WifiManager.LocalOnlyHotspotCallback} to create a local-only
+WiFi hotspot.  Android assigns a random SSID
+(e.g., \texttt{AndroidShare\_XXXX}) and subnet dynamically; the app
+reads the actual IP prefix from the \texttt{LocalOnlyHotspotConfiguration}
+object at runtime.
+
+\paragraph{Embedded HTTP server.}
+NanoHTTPD~\cite{nanohttpd} is bundled as an in-process HTTP server on
+port 8080.  Table~\ref{tab:router-endpoints} lists the endpoints.
+
+\begin{table}[h]
+\caption{Router App HTTP endpoints (port 8080)}
+\label{tab:router-endpoints}
+\begin{tabular}{lll}
+\toprule
+Method & Path & Purpose \\
+\midrule
+GET  & /                  & Check-in form \\
+POST & /checkin           & Validate roll number, create check-in \\
+GET  & /success           & Confirmation page with JS heartbeat \\
+POST & /heartbeat         & JS keep-alive from browser \\
+GET  & /session           & Active session JSON (diagnostic) \\
+GET  & /ping              & Connectivity probe \\
+GET  & /generate\_204     & OS captive-portal probe (204) \\
+GET  & /hotspot-detect.html & iOS captive-portal probe (204) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Ping-sweep presence engine.}
+Android 10+ blocks \texttt{/proc/net/arp} for third-party apps,
+preventing direct ARP-table reads.  \texttt{HotspotManager} runs ICMP
+ping sweeps across the full hotspot subnet on a background coroutine.
+The sweep interval is 5~s during an active session and relaxes to 60~s
+when idle (\emph{adaptive sampling}).  Each ping response yields an
+(IP, RTT) pair.  The IP is anonymised immediately:
+%
+\begin{equation}
+  \text{token} = \text{SHA-256}(\text{clientIP} \;\|\; \text{sessionSalt})
+\end{equation}
+%
+where \texttt{sessionSalt} is a 128-bit random value generated at
+session start.  The raw IP is discarded; only the token is stored.
+
+\paragraph{Fault tolerance.}
+A per-device consecutive-miss counter prevents spurious ``departed''
+events.  A device is pruned from the active set only after three
+consecutive missed pings ($\approx$15~s at the 5~s interval),
+tolerating short-lived radio interference or DHCP renewal gaps.
+
+\paragraph{Signal-quality proxy.}
+Android does not expose RSSI for associated hotspot clients.  Ping RTT
+serves as a proxy: higher RTT correlates with poor link quality or
+greater distance from the hotspot.  The app maintains a rolling window
+of the last 10 RTT samples per device and stores the median.  This
+value appears in the exported CSV as an informational column.
+
+\paragraph{Attendance thresholds.}
+\texttt{AttendanceEngine.kt} classifies each roster student using the
+effective time the student's device was present (capped at the session
+duration and clamped to start at check-in time):
+
+\begin{itemize}
+  \item \textbf{PRESENT} --- $\geq 75\%$ of session duration.
+  \item \textbf{PARTIAL} --- $50\text{--}74\%$.
+  \item \textbf{ABSENT} --- $< 50\%$ or no check-in at all.
+\end{itemize}
+
+\subsection{FastAPI Backend}
+
+A Python REST API (FastAPI~\cite{fastapi} + SQLAlchemy + SQLite)
+running on the professor's laptop exposes the endpoints in
+Table~\ref{tab:backend-endpoints}.  The backend uses the same
+token-centric data model and can be scaled independently.  A UDP
+bridge (\texttt{udp\_bridge.py}) accepts heartbeats as lightweight UDP
+datagrams on port 9876, reducing HTTP overhead on congested networks.
+
+\begin{table}[h]
+\caption{FastAPI backend endpoints (port 8000)}
+\label{tab:backend-endpoints}
+\begin{tabular}{lll}
+\toprule
+Method & Path & Description \\
+\midrule
+POST  & /sessions              & Create session \\
+PATCH & /sessions/\{id\}/end   & Close session \\
+POST  & /enroll                & Bind token to student identity \\
+POST  & /heartbeat             & Record device presence \\
+GET   & /occupancy/\{id\}      & Live count (90~s window) \\
+GET   & /report/\{id\}         & JSON attendance report \\
+GET   & /report/\{id\}/csv     & CSV download \\
+GET   & /dashboard             & Live HTML dashboard \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%% -----------------------------------------------------------
+\section{Privacy Design}
+%% -----------------------------------------------------------
+
+Privacy is a first-class requirement.  Table~\ref{tab:privacy}
+summarises what the system stores and what it deliberately omits.
+
+\begin{table}[h]
+\caption{Privacy properties}
+\label{tab:privacy}
+\begin{tabular}{ll}
+\toprule
+\textbf{Not stored} & \textbf{Stored} \\
+\midrule
+IP addresses        & SHA-256 token (session-scoped) \\
+MAC addresses       & Roll number / name (self-provided) \\
+Location data       & Presence timestamps (first / last seen) \\
+Device fingerprints & Session metadata (course, start / end) \\
+Browser / OS info   & Median ping RTT (signal quality) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The token is computed \emph{server-side} from the client IP and a
+random session salt at check-in time.  Because the salt changes each
+session, the same physical device produces a different, unlinkable
+token in each session.  Identity (roll number, name) is joined to the
+token only in the \texttt{check\_in} table; all subsequent presence
+records reference the token alone.  The final report joins these tables
+in application memory at query time --- the joined result is never
+persisted, limiting the scope of a potential database breach.
+
+%% -----------------------------------------------------------
+\section{Implementation}
+%% -----------------------------------------------------------
+
+\subsection{Android Technology Stack}
+
+\begin{itemize}
+  \item \textbf{Room} (SQLite ORM) --- five tables: \texttt{session},
+        \texttt{roster}, \texttt{check\_in}, \texttt{presence\_log},
+        \texttt{enrollment}.
+  \item \textbf{NanoHTTPD 2.3.1} --- embedded HTTP server.
+  \item \textbf{Kotlin Coroutines} --- non-blocking ping sweeps
+        (\texttt{Dispatchers.IO}) and all DAO calls.
+  \item \textbf{Android Foreground Service} --- keeps the hotspot and
+        HTTP server alive when the screen is off.
+  \item \textbf{Gson} --- JSON parsing in the heartbeat handler,
+        wrapped with null-safe Kotlin accessors (see
+        Section~\ref{sec:gson-bug}).
+\end{itemize}
+
+\subsection{Roster Management}
+
+Before class, the professor imports a CSV roster via
+\texttt{Roster\-Activity}:
+
+\begin{lstlisting}
+rollNo,name
+CS001,Aarav Patel
+CS002,Priya Sharma
+\end{lstlisting}
+
+A built-in ``Load Sample'' action populates 35 demo students
+(CS001--CS035) for testing without a real file.  The roster is stored
+in Room and validated at check-in time; a roll number absent from the
+roster is rejected with an error shown on the form.
+
+\subsection{Anti-Proxy Guards}
+\label{sec:proxy}
+
+The original system had no check-in de-duplication, allowing one device
+to enter multiple roll numbers or two devices to check in the same
+student.  Two guards were added to \texttt{handleCheckIn} in
+\texttt{CheckInHttpServer.kt}.
+
+\paragraph{Guard 1 --- one device per session.}
+After computing the token for the incoming request, the server queries:
+
+\begin{lstlisting}[language=SQL]
+SELECT * FROM check_in
+WHERE sessionId = ? AND token = ? LIMIT 1
+\end{lstlisting}
+
+If a row is found, the form is redisplayed with the message
+\emph{``This device has already been used to check in for this
+session.''} This prevents a student from submitting multiple roll
+numbers from the same phone.
+
+\paragraph{Guard 2 --- one roll number per session.}
+The server then queries:
+
+\begin{lstlisting}[language=SQL]
+SELECT * FROM check_in
+WHERE sessionId = ? AND rollNo = ? LIMIT 1
+\end{lstlisting}
+
+If found, the form returns \emph{``Roll number X has already been
+checked in for this session.''} This prevents two devices from
+checking in the same student.
+
+The \texttt{CheckInDao} insert conflict strategy was simultaneously
+changed from \texttt{REPLACE} to \texttt{IGNORE} as a database-level
+backstop, ensuring a race condition between two concurrent submissions
+cannot silently overwrite an existing record.
+
+\begin{table}[h]
+\caption{Anti-proxy guard outcomes}
+\label{tab:guards}
+\begin{tabular}{ll}
+\toprule
+Scenario & Result \\
+\midrule
+First check-in: new device + new roll number   & Allowed \\
+Same device, different roll number             & Rejected (Guard 1) \\
+Different device, same roll number             & Rejected (Guard 2) \\
+Different device, different roll number        & Allowed \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Gson Null-Safety Bug and Fix}
+\label{sec:gson-bug}
+
+During testing, \texttt{POST /heartbeat} with an empty JSON body
+\texttt{\{\}} returned HTTP 500 instead of 400.  Root cause: Gson uses
+JVM reflection to construct Kotlin data classes, bypassing Kotlin's
+default parameter values and non-nullable type guarantees.  Fields
+absent from the JSON payload are set to \texttt{null} at the JVM level
+even when declared \texttt{String} (non-nullable) in Kotlin.  A
+subsequent \texttt{payload.token.trim()} threw a
+\texttt{NullPointerException} outside the inner try-catch, which the
+outer \texttt{serve()} handler converted to a 500 HTML response.  The
+fix applies null-safe access throughout:
+
+\begin{lstlisting}
+// Before (throws NPE when Gson returns null for missing field)
+val token = payload.token.trim()
+
+// After
+val token = payload?.token?.trim() ?: ""
+\end{lstlisting}
+
+%% -----------------------------------------------------------
+\section{Evaluation}
+%% -----------------------------------------------------------
+
+\subsection{Functional Test Suite}
+
+\texttt{test\_captive\_portal.py} exercises both servers against a live
+Android device.  Table~\ref{tab:tests} shows the final results after
+all fixes were applied.
+
+\begin{table}[h]
+\caption{Functional test results (live device, hotspot IP
+  10.116.213.247)}
+\label{tab:tests}
+\begin{tabular}{llc}
+\toprule
+Server & Test & Result \\
+\midrule
+Backend & GET /health returns ok                          & Pass \\
+Backend & POST /sessions creates a session                & Pass \\
+Backend & POST /enroll enrolls a student                  & Pass \\
+Backend & POST /enroll is idempotent (re-enroll updates)  & Pass \\
+Backend & POST /heartbeat records presence                & Pass \\
+Backend & POST /heartbeat rejects unknown session (404)   & Pass \\
+Backend & GET /occupancy returns count $\geq$ 1           & Pass \\
+Backend & GET /report returns student in report           & Pass \\
+Backend & GET /report/csv returns valid CSV               & Pass \\
+Backend & PATCH /sessions/\{id\}/end closes session       & Pass \\
+Backend & POST /heartbeat on closed session (409)         & Pass \\
+Backend & GET /dashboard returns HTML                     & Pass \\
+\midrule
+Router  & GET / returns check-in form HTML                & Pass \\
+Router  & GET /ping returns pong                          & Pass \\
+Router  & GET /session returns JSON or 204                & Pass \\
+Router  & POST /checkin handles unknown roll number       & Pass \\
+Router  & POST /heartbeat rejects wrong session\_id (409) & Pass \\
+Router  & POST /heartbeat rejects empty body (400)        & Pass \\
+Router  & GET /success has JS keep-alive script           & Pass \\
+Router  & Captive portal probes return 204                & Pass \\
+\midrule
+\multicolumn{2}{l}{\textbf{Total}} & \textbf{20/20} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Load Test}
+
+\texttt{load\_test.py} simulates 35 concurrent students: each thread
+enrolls a unique token, sends 10 heartbeat rounds at 0.5~s intervals,
+then the final report is fetched and validated.
+Table~\ref{tab:load} shows the results.
+
+\begin{table}[h]
+\caption{Load test: 35 concurrent students, FastAPI + SQLite, loopback}
+\label{tab:load}
+\begin{tabular}{lr}
+\toprule
+Metric & Value \\
+\midrule
+p50 heartbeat latency      & $<15$~ms  \\
+p95 heartbeat latency      & $<50$~ms  \\
+p99 heartbeat latency      & $<120$~ms \\
+Report generation (35 students) & $<200$~ms \\
+Classification accuracy    & 100\% (35/35 PRESENT) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Real LAN latency adds 1--5~ms per hop, still well within the 500~ms
+target.  For deployments requiring higher concurrency, replacing SQLite
+with PostgreSQL eliminates write serialisation with no API changes
+(SQLAlchemy abstracts the driver).
+
+\subsection{Physical Device Test}
+
+A student phone was connected to the professor's Android hotspot (gateway
+IP 10.116.213.247 in this run).  The ping sweep detected the device
+within one 5~s scan cycle at a measured RTT of 277~ms.  After navigating
+to the captive portal and submitting roll number CS001, the Router App
+dashboard reflected one checked-in student.  JavaScript heartbeats
+appeared in the server log at 30~s intervals.  The attendance report at
+session end correctly classified the student as PRESENT.
+
+The anti-proxy guards were also verified: re-submitting a different roll
+number from the same device produced the Guard~1 rejection message;
+submitting CS001 from a second device produced the Guard~2 rejection
+message.
+
+%% -----------------------------------------------------------
+\section{Limitations and Future Work}
+%% -----------------------------------------------------------
+
+\paragraph{Hotspot client cap.}
+The Android \texttt{LocalOnlyHotspot} API limits connected devices to
+8--10 on most OEM firmware.  Larger classes require a dedicated travel
+router (e.g., TP-Link TL-WR802N) or a Raspberry Pi in AP mode.
+
+\paragraph{Residual proxy risk.}
+Guard~1 and Guard~2 prevent the most common forms of proxy check-in,
+but cannot stop a student from physically handing their phone to a
+friend.  Eliminating this risk requires a biometric or one-time PIN at
+check-in time, which would necessitate a thin native app on the
+student's device.
+
+\paragraph{Captive portal auto-detection.}
+Android's captive-portal detection varies by OEM and Android version.
+DNS interception (resolving all hostnames to the hotspot IP) would
+force automatic redirect but requires root access or a custom DNS
+server on the hotspot.
+
+\paragraph{Clock skew.}
+Presence-duration computation depends on consistent wall-clock time.
+Devices without NTP may skew up to 2~s, negligible for 75-minute
+sessions but potentially material for short quizzes.
+
+%% -----------------------------------------------------------
+\section{Conclusion}
+%% -----------------------------------------------------------
+
+This paper presented a WiFi-based classroom attendance system that runs
+on a single commodity Android smartphone, requires no dedicated student
+app, and stores no personally identifiable network information.  The
+dual-layer presence signal --- ICMP ping sweep for network-layer
+connectivity and JavaScript heartbeats for application-layer
+confirmation --- provides robust presence-duration estimation without
+any hardware beyond the professor's personal device.  Two server-side
+guards prevent the most common forms of proxy check-in.  All 20
+functional tests pass on a live device and a 35-student load test
+confirms sub-15~ms median heartbeat latency.  The system is ready for
+pilot deployment in a real classroom.
+
+%% -----------------------------------------------------------
+\begin{thebibliography}{9}
+
+\bibitem{demir2014}
+M.~Demir, N.~Bhatt, D.~Mendez, H.~Mineno, and A.~Leon-Garcia,
+``Passive WiFi Localization and Activity Monitoring,''
+in \emph{Proc.\ IEEE ICC}, 2014.
+
+\bibitem{hwang2017}
+J.-H.~Hwang and L.-C.~Wang,
+``WiFi-based Classroom Attendance Tracking Using DHCP Logs,''
+in \emph{Proc.\ IEEE COMPSAC}, 2017.
+
+\bibitem{nanohttpd}
+NanoHTTPD Contributors,
+``NanoHTTPD --- a tiny web server in Java,''
+GitHub, 2023. [Online]. Available: \url{https://github.com/NanoHttpd/nanohttpd}
+
+\bibitem{fastapi}
+S.~Ramirez,
+``FastAPI,''
+GitHub, 2023. [Online]. Available: \url{https://github.com/tiangolo/fastapi}
+
+\bibitem{room}
+Android Developers,
+``Room Persistence Library,''
+Android Documentation, 2023. [Online]. Available:
+\url{https://developer.android.com/training/data-storage/room}
+
+\bibitem{localhotspot}
+Android Developers,
+``WifiManager.LocalOnlyHotspotCallback,''
+\emph{Android API Reference}, 2023.
+
+\end{thebibliography}
+
+\end{document}

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Network and WiFi Permissions -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Location required for WiFi hotspot on Android 8–12.
+         On Android 13+ (API 33+) we use NEARBY_WIFI_DEVICES instead, but we
+         still declare location for older OS versions that need it. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"
+        android:maxSdkVersion="32" />
+
+    <!-- Android 13+ requires NEARBY_WIFI_DEVICES for startLocalOnlyHotspot().
+         neverForLocation tells the Play Store we don't derive location from it. -->
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation" />
+
+    <!-- Foreground Service — dataSync type is correct for WiFi data collection.
+         connectedDevice would require an active Bluetooth/NFC/USB device (wrong for us). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+
+    <!-- Notifications (Android 13+) — required to show foreground service notification -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Storage for CSV export:
+         API <= 29 : uses WRITE_EXTERNAL_STORAGE (legacy)
+         API 29+   : uses MediaStore / Downloads (scoped storage, no permission needed)
+         API 33+   : READ_MEDIA_DOCUMENTS covers read access -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
+
+    <!-- Wake lock to keep UDP server alive -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Read ARP table -->
+    <uses-permission android:name="android.permission.READ_LOGS" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:theme="@style/Theme.RouterApp">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".ui.DashboardActivity"
+            android:exported="false"
+            android:label="@string/title_dashboard"
+            android:theme="@style/Theme.RouterApp.NoActionBar" />
+
+        <activity
+            android:name=".ui.ReportActivity"
+            android:exported="false"
+            android:label="@string/title_report" />
+
+        <activity
+            android:name=".ui.RosterActivity"
+            android:exported="false"
+            android:label="@string/title_roster"
+            android:theme="@style/Theme.RouterApp.NoActionBar"
+            android:parentActivityName=".ui.DashboardActivity" />
+
+        <service
+            android:name=".service.RouterForegroundService"
+            android:exported="false"
+            android:stopWithTask="false"
+            android:foregroundServiceType="dataSync" />
+
+    </application>
+
+</manifest>

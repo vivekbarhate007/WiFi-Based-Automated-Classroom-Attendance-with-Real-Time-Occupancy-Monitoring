@@ -1,0 +1,515 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/colorBackground">
+
+    <!-- AppBar -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fitsSystemWindows="true">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/colorPrimary"
+            app:title="@string/title_dashboard"
+            app:titleTextColor="@color/white" />
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- Scrollable content -->
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
+        android:padding="16dp"
+        android:clipToPadding="false">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- ============================================================ -->
+            <!-- SSID / Network Card (big, for students to read)             -->
+            <!-- ============================================================ -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="4dp"
+                app:cardBackgroundColor="@color/colorPrimary">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="NETWORK INFO"
+                        android:textSize="12sp"
+                        android:textColor="#88FFFFFF"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.15" />
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="10dp"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="80dp"
+                            android:layout_height="wrap_content"
+                            android:text="SSID:"
+                            android:textSize="14sp"
+                            android:textColor="#BBFFFFFF" />
+
+                        <TextView
+                            android:id="@+id/tvSsid"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="—"
+                            android:textSize="22sp"
+                            android:textStyle="bold"
+                            android:textColor="@color/white" />
+                    </LinearLayout>
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="6dp"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="80dp"
+                            android:layout_height="wrap_content"
+                            android:text="Password:"
+                            android:textSize="14sp"
+                            android:textColor="#BBFFFFFF" />
+
+                        <TextView
+                            android:id="@+id/tvPassphrase"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="—"
+                            android:textSize="22sp"
+                            android:textStyle="bold"
+                            android:textColor="#FFE082" />
+                    </LinearLayout>
+
+                    <!-- Status line: "Starting hotspot…" / "Ready" / error -->
+                    <TextView
+                        android:id="@+id/tvNetworkStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="⏳ Starting hotspot…"
+                        android:textSize="12sp"
+                        android:textColor="#CCFFFFFF" />
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ============================================================ -->
+            <!-- Check-In QR Card                                             -->
+            <!--   Students scan the QR to open the check-in form over HTTP   -->
+            <!-- ============================================================ -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/colorSurface">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/label_check_in_qr"
+                        android:textSize="12sp"
+                        android:textColor="@color/colorTextSecondary"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.15" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/label_check_in_instructions"
+                        android:textSize="12sp"
+                        android:textColor="@color/colorTextSecondary" />
+
+                    <!-- The QR image. Generated in code once we know the hotspot IP. -->
+                    <ImageView
+                        android:id="@+id/ivQrCode"
+                        android:layout_width="220dp"
+                        android:layout_height="220dp"
+                        android:layout_gravity="center_horizontal"
+                        android:layout_marginTop="12dp"
+                        android:background="#FFFFFF"
+                        android:contentDescription="@string/label_check_in_qr"
+                        android:padding="8dp" />
+
+                    <!-- Friendly label shown instead of the raw http://ip:port.
+                         Keeps the dashboard looking tidy and hides the
+                         technical details from students watching the screen.
+                         Long-press tvCheckInLabel to reveal the real URL
+                         (for teachers who need to debug). -->
+                    <TextView
+                        android:id="@+id/tvCheckInLabel"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:padding="6dp"
+                        android:text="@string/check_in_label_default"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/colorPrimary"
+                        android:gravity="center"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:longClickable="true" />
+
+                    <!-- Hidden by default — only revealed on long-press of
+                         tvCheckInLabel, so the numeric URL is never shown
+                         in the casual view. -->
+                    <TextView
+                        android:id="@+id/tvCheckInUrl"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:padding="4dp"
+                        android:text="@string/check_in_url_placeholder"
+                        android:textSize="12sp"
+                        android:textColor="@color/colorTextSecondary"
+                        android:textIsSelectable="true"
+                        android:gravity="center"
+                        android:typeface="monospace"
+                        android:visibility="gone" />
+
+                    <!-- Self-test button. Hits /ping on our own server from
+                         the router phone so the teacher can confirm the
+                         server is alive before blaming the student. -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnTestServer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/btn_test_server"
+                        android:textSize="12sp"
+                        style="@style/Widget.RouterApp.Button.Secondary" />
+
+                    <!-- Live check-in counter -->
+                    <TextView
+                        android:id="@+id/tvCheckedInCount"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="0 / 0 checked in"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/colorSuccess"
+                        android:gravity="center" />
+
+                    <!-- Comma-separated names of students who have checked in -->
+                    <TextView
+                        android:id="@+id/tvCheckedInNames"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="@string/check_in_names_empty"
+                        android:textSize="12sp"
+                        android:textColor="@color/colorTextSecondary"
+                        android:gravity="center" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnManageRoster"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="@string/btn_manage_roster"
+                        android:textSize="13sp"
+                        style="@style/Widget.RouterApp.Button.Secondary" />
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ============================================================ -->
+            <!-- Occupancy Card                                               -->
+            <!-- ============================================================ -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/colorSurface">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="20dp"
+                    android:gravity="center_horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="STUDENTS PRESENT"
+                        android:textSize="12sp"
+                        android:textColor="@color/colorTextSecondary"
+                        android:textStyle="bold"
+                        android:letterSpacing="0.15" />
+
+                    <TextView
+                        android:id="@+id/tvOccupancy"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textSize="80sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/colorPrimary"
+                        android:lineSpacingMultiplier="0.9" />
+
+                    <TextView
+                        android:id="@+id/tvEffectiveOccupancy"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Including disconnected: 0"
+                        android:textSize="13sp"
+                        android:textColor="@color/colorTextSecondary" />
+
+                    <TextView
+                        android:id="@+id/tvEnrolledCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Enrolled students: 0"
+                        android:textSize="13sp"
+                        android:textColor="@color/colorTextSecondary" />
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ============================================================ -->
+            <!-- Session Status Card                                          -->
+            <!-- ============================================================ -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="12dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/colorSurface">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Header row: "SESSION" label + LIVE badge -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="SESSION"
+                            android:textSize="12sp"
+                            android:textColor="@color/colorTextSecondary"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.15" />
+
+                        <TextView
+                            android:id="@+id/tvLiveBadge"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="● LIVE"
+                            android:textSize="11sp"
+                            android:textColor="#FFFFFF"
+                            android:textStyle="bold"
+                            android:background="@drawable/bg_live_badge"
+                            android:paddingStart="8dp"
+                            android:paddingEnd="8dp"
+                            android:paddingTop="3dp"
+                            android:paddingBottom="3dp"
+                            android:visibility="gone" />
+
+                    </LinearLayout>
+
+                    <!-- Course name / status -->
+                    <TextView
+                        android:id="@+id/tvSessionStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="No active session"
+                        android:textSize="15sp"
+                        android:textColor="@color/colorTextPrimary" />
+
+                    <!-- Elapsed time — visible only when session is active -->
+                    <TextView
+                        android:id="@+id/tvElapsedTime"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="00:00:00"
+                        android:textSize="12sp"
+                        android:textColor="@color/colorSuccess"
+                        android:visibility="gone" />
+
+                    <TextView
+                        android:id="@+id/tvStatusMessage"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text=""
+                        android:textSize="12sp"
+                        android:textColor="@color/colorInfo" />
+
+                    <!-- Buttons row -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:layout_marginTop="12dp">
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnStartSession"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginEnd="4dp"
+                            android:text="@string/btn_start_session"
+                            android:textSize="13sp"
+                            style="@style/Widget.RouterApp.Button.Primary" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnEndSession"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="4dp"
+                            android:text="@string/btn_end_session"
+                            android:textSize="13sp"
+                            android:enabled="false"
+                            style="@style/Widget.RouterApp.Button.Danger" />
+                    </LinearLayout>
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnViewReport"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/btn_view_report"
+                        android:textSize="13sp"
+                        style="@style/Widget.RouterApp.Button.Secondary" />
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- ============================================================ -->
+            <!-- Connected Devices Card                                       -->
+            <!--   Cumulative list of devices that joined the hotspot during  -->
+            <!--   this session. Identifier is an anonymized SHA-256 token.   -->
+            <!-- ============================================================ -->
+            <androidx.cardview.widget.CardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:cardBackgroundColor="@color/colorSurface">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <!-- Header row: label + counts -->
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="CONNECTED DEVICES"
+                            android:textSize="12sp"
+                            android:textColor="@color/colorTextSecondary"
+                            android:textStyle="bold"
+                            android:letterSpacing="0.15" />
+
+                        <TextView
+                            android:id="@+id/tvDeviceCounts"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0 online / 0 total"
+                            android:textSize="12sp"
+                            android:textColor="@color/colorTextSecondary" />
+                    </LinearLayout>
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Anonymous WiFi-connected clients. Green = online now, grey = disconnected."
+                        android:textSize="11sp"
+                        android:textColor="@color/colorTextSecondary" />
+
+                    <!-- Empty state -->
+                    <TextView
+                        android:id="@+id/tvNoDevices"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="No devices have connected yet.\nAsk students to join the hotspot above."
+                        android:textSize="13sp"
+                        android:textColor="@color/colorTextSecondary"
+                        android:gravity="center"
+                        android:padding="16dp" />
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rvConnectedDevices"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:maxHeight="360dp"
+                        android:nestedScrollingEnabled="false"
+                        android:visibility="gone" />
+
+                </LinearLayout>
+            </androidx.cardview.widget.CardView>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

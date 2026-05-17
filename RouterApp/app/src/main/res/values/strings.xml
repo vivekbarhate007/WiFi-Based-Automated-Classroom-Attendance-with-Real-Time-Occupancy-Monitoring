@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">RouterApp</string>
+
+    <!-- MainActivity -->
+    <string name="title_permission_setup">Permission Setup</string>
+    <string name="label_permission_rationale">This app needs the following permissions to create a classroom WiFi hotspot and monitor attendance:</string>
+    <string name="label_permissions_list">• Location (required for WiFi hotspot)\n• WiFi State (create/manage hotspot)\n• Network State (monitor connections)\n• Storage (export CSV reports)</string>
+    <string name="btn_grant_permissions">Grant Permissions</string>
+    <string name="permissions_granted">All permissions granted. Starting service…</string>
+    <string name="permissions_required">Please grant the required permissions to continue.</string>
+    <string name="permissions_denied">The following permissions were denied: %1$s\nSome features may not work correctly.</string>
+
+    <!-- DashboardActivity -->
+    <string name="title_dashboard">Classroom Dashboard</string>
+    <string name="label_network_info">Network Info</string>
+    <string name="label_ssid">SSID:</string>
+    <string name="label_password">Password:</string>
+    <string name="label_occupancy">Students Present</string>
+    <string name="effective_occupancy">Including disconnected: %1$d</string>
+    <string name="enrolled_count">Enrolled students: %1$d</string>
+    <string name="session_active">Session: %1$s (ID: %2$s)</string>
+    <string name="session_inactive">No active session</string>
+    <string name="label_active_tokens">Active Tokens</string>
+    <string name="btn_start_session">Start Session</string>
+    <string name="btn_end_session">End Session</string>
+    <string name="btn_view_report">View Report</string>
+
+    <!-- ReportActivity -->
+    <string name="title_report">Attendance Report</string>
+    <string name="label_select_session">Select Session:</string>
+    <string name="label_class_duration">Class Duration (minutes):</string>
+    <string name="btn_generate_report">Generate Report</string>
+    <string name="btn_export_csv">Export CSV</string>
+    <string name="report_empty">No report generated yet. Select a session and tap Generate Report.</string>
+    <string name="no_sessions_found">No sessions found. Start a session from the dashboard first.</string>
+    <string name="label_report_summary">Summary</string>
+
+    <!-- Student item -->
+    <string name="label_student_id">ID:</string>
+    <string name="label_duration">Duration:</string>
+    <string name="label_percentage">Attendance:</string>
+
+    <!-- Check-in / QR -->
+    <string name="label_check_in_qr">Student Check-in</string>
+    <string name="label_check_in_instructions">1. Join the WiFi above.\n2. If your phone says \"WiFi has no internet\", tap \"Stay connected\" / \"Use anyway\".\n3. Turn OFF mobile data so the browser uses this WiFi.\n4. Scan the QR or open the URL below.</string>
+    <string name="check_in_count_fmt">%1$d / %2$d checked in</string>
+    <string name="check_in_names_empty">No check-ins yet</string>
+    <string name="check_in_url_placeholder">Waiting for hotspot…</string>
+    <string name="check_in_label_default">Scan QR to check in</string>
+    <string name="check_in_url_hint">Tap to copy. Students: turn OFF mobile data, then open this URL in the browser.</string>
+    <string name="check_in_url_copied">URL copied to clipboard</string>
+    <string name="btn_test_server">Test Server</string>
+    <string name="test_server_ok">Server reachable ✓ (%1$s)</string>
+    <string name="test_server_fail">Server unreachable ✗ (%1$s)</string>
+    <string name="test_server_no_ip">Hotspot IP not detected — check logcat</string>
+    <string name="btn_manage_roster">Manage Roster</string>
+
+    <!-- RosterActivity -->
+    <string name="title_roster">Class Roster</string>
+    <string name="btn_import_csv">Import CSV</string>
+    <string name="btn_load_sample">Load Sample Roster</string>
+    <string name="btn_clear_roster">Clear All</string>
+    <string name="roster_empty">No students in the roster.\nImport a CSV (rollNo,name) or load the sample.</string>
+    <string name="roster_count_fmt">%1$d students</string>
+</resources>

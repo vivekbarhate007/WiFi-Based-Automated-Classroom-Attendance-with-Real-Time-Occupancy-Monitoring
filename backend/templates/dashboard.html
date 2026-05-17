@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Classroom Attendance Dashboard</title>
+  <style>
+    /* -----------------------------------------------------------------------
+       Base reset & typography
+    ----------------------------------------------------------------------- */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                   "Helvetica Neue", Arial, sans-serif;
+      background: #f0f4f8;
+      color: #1a202c;
+      min-height: 100vh;
+    }
+
+    /* -----------------------------------------------------------------------
+       Header / nav bar
+    ----------------------------------------------------------------------- */
+    header {
+      background: #1a56db;
+      color: #fff;
+      padding: 0 2rem;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      box-shadow: 0 2px 6px rgba(0,0,0,.25);
+    }
+
+    header svg { flex-shrink: 0; }
+
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+
+    header .subtitle {
+      font-size: .8rem;
+      opacity: .75;
+      margin-top: 2px;
+    }
+
+    /* -----------------------------------------------------------------------
+       Main layout
+    ----------------------------------------------------------------------- */
+    main {
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* -----------------------------------------------------------------------
+       Cards
+    ----------------------------------------------------------------------- */
+    .card {
+      background: #fff;
+      border-radius: 10px;
+      padding: 1.5rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,.1);
+    }
+
+    .card-title {
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: #718096;
+      margin-bottom: 1rem;
+    }
+
+    /* -----------------------------------------------------------------------
+       Controls row
+    ----------------------------------------------------------------------- */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      align-items: flex-end;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: .4rem;
+      flex: 1 1 280px;
+    }
+
+    .form-group label {
+      font-size: .85rem;
+      font-weight: 600;
+      color: #4a5568;
+    }
+
+    select {
+      height: 42px;
+      padding: 0 .75rem;
+      border: 1.5px solid #cbd5e0;
+      border-radius: 6px;
+      font-size: .95rem;
+      background: #fff;
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+
+    select:focus {
+      outline: none;
+      border-color: #1a56db;
+      box-shadow: 0 0 0 3px rgba(26,86,219,.15);
+    }
+
+    .btn {
+      height: 42px;
+      padding: 0 1.25rem;
+      border: none;
+      border-radius: 6px;
+      font-size: .9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, transform .1s;
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+    }
+
+    .btn:active { transform: scale(.97); }
+
+    .btn-primary  { background: #1a56db; color: #fff; }
+    .btn-primary:hover  { background: #1648c0; }
+
+    .btn-outline  { background: transparent; color: #1a56db;
+                    border: 1.5px solid #1a56db; }
+    .btn-outline:hover  { background: #ebf0fd; }
+
+    .btn-danger   { background: #e53e3e; color: #fff; }
+    .btn-danger:hover   { background: #c53030; }
+
+    .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* -----------------------------------------------------------------------
+       Stats strip
+    ----------------------------------------------------------------------- */
+    .stats-strip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .stat-box {
+      flex: 1 1 180px;
+      background: #ebf4ff;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: .25rem;
+    }
+
+    .stat-box .stat-label {
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #2b6cb0;
+    }
+
+    .stat-box .stat-value {
+      font-size: 2.25rem;
+      font-weight: 800;
+      color: #1a365d;
+      line-height: 1;
+    }
+
+    .stat-box .stat-sub {
+      font-size: .78rem;
+      color: #4a5568;
+    }
+
+    /* live pulse dot */
+    .live-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      font-size: .75rem;
+      font-weight: 700;
+      color: #22543d;
+      background: #c6f6d5;
+      border-radius: 999px;
+      padding: .2rem .7rem;
+      width: fit-content;
+      margin-top: .25rem;
+    }
+
+    .pulse {
+      width: 8px; height: 8px;
+      background: #38a169;
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1;   transform: scale(1); }
+      50%       { opacity: .4; transform: scale(1.5); }
+    }
+
+    /* -----------------------------------------------------------------------
+       Attendance table
+    ----------------------------------------------------------------------- */
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .9rem;
+    }
+
+    thead {
+      background: #ebf4ff;
+    }
+
+    thead th {
+      padding: .75rem 1rem;
+      text-align: left;
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #2b6cb0;
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      border-top: 1px solid #e2e8f0;
+      transition: background .1s;
+    }
+
+    tbody tr:hover { background: #f7fafc; }
+
+    tbody td {
+      padding: .7rem 1rem;
+      white-space: nowrap;
+    }
+
+    /* row colour coding */
+    tr.PRESENT  { border-left: 4px solid #38a169; }
+    tr.PARTIAL  { border-left: 4px solid #d69e2e; }
+    tr.ABSENT   { border-left: 4px solid #e53e3e; }
+
+    .badge {
+      display: inline-block;
+      padding: .2rem .65rem;
+      border-radius: 999px;
+      font-size: .75rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+    }
+
+    .badge-present { background: #c6f6d5; color: #22543d; }
+    .badge-partial { background: #fefcbf; color: #744210; }
+    .badge-absent  { background: #fed7d7; color: #742a2a; }
+
+    /* -----------------------------------------------------------------------
+       Progress bar
+    ----------------------------------------------------------------------- */
+    .progress-bar-wrap {
+      background: #e2e8f0;
+      border-radius: 999px;
+      height: 8px;
+      width: 120px;
+      overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width .3s;
+    }
+
+    .fill-present { background: #38a169; }
+    .fill-partial { background: #d69e2e; }
+    .fill-absent  { background: #e53e3e; }
+
+    /* -----------------------------------------------------------------------
+       Empty / loading states
+    ----------------------------------------------------------------------- */
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #718096;
+    }
+
+    .empty-state p { margin-top: .5rem; font-size: .9rem; }
+
+    .spinner {
+      display: inline-block;
+      width: 36px; height: 36px;
+      border: 4px solid #bee3f8;
+      border-top-color: #1a56db;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin-bottom: .75rem;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* -----------------------------------------------------------------------
+       Toast notification
+    ----------------------------------------------------------------------- */
+    #toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: #2d3748;
+      color: #fff;
+      padding: .75rem 1.25rem;
+      border-radius: 8px;
+      font-size: .9rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,.25);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity .25s, transform .25s;
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* -----------------------------------------------------------------------
+       Footer
+    ----------------------------------------------------------------------- */
+    footer {
+      text-align: center;
+      font-size: .78rem;
+      color: #a0aec0;
+      padding: 2rem 0 1rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- =========================================================
+     HEADER
+========================================================== -->
+<header>
+  <!-- WiFi icon -->
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+       stroke="currentColor" stroke-width="2" stroke-linecap="round"
+       stroke-linejoin="round">
+    <path d="M5 12.55a11 11 0 0 1 14 0"/>
+    <path d="M1.42 9A16 16 0 0 1 22.58 9"/>
+    <path d="M8.53 16.11a6 6 0 0 1 6.95 0"/>
+    <circle cx="12" cy="20" r="1" fill="currentColor"/>
+  </svg>
+  <div>
+    <h1>Classroom Attendance Dashboard</h1>
+    <div class="subtitle">WiFi-Based Automated Attendance System</div>
+  </div>
+</header>
+
+<!-- =========================================================
+     MAIN
+========================================================== -->
+<main>
+
+  <!-- ---- Session selector ---- -->
+  <div class="card">
+    <div class="card-title">Session Selection</div>
+    <div class="controls">
+      <div class="form-group">
+        <label for="sessionSelect">Active / Past Session</label>
+        <select id="sessionSelect">
+          <option value="">— Select a session —</option>
+          {% for s in sessions %}
+          <option value="{{ s.session_id }}"
+                  {% if loop.first %}selected{% endif %}>
+            {{ s.label }}{% if s.ended %} [ENDED]{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <button class="btn btn-primary" onclick="loadReport()">
+        <!-- refresh icon -->
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <polyline points="23 4 23 10 17 10"/>
+          <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+        </svg>
+        Load Report
+      </button>
+      <button class="btn btn-outline" onclick="exportCSV()" id="csvBtn" disabled>
+        <!-- download icon -->
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Export CSV
+      </button>
+    </div>
+  </div>
+
+  <!-- ---- Live stats strip ---- -->
+  <div class="stats-strip" id="statsStrip" style="display:none">
+    <div class="stat-box">
+      <span class="stat-label">Live Occupancy</span>
+      <span class="stat-value" id="liveCount">—</span>
+      <div class="live-badge">
+        <div class="pulse"></div>
+        Updating every 10 s
+      </div>
+    </div>
+    <div class="stat-box">
+      <span class="stat-label">Total Enrolled</span>
+      <span class="stat-value" id="totalCount">—</span>
+      <span class="stat-sub">students in this session</span>
+    </div>
+    <div class="stat-box">
+      <span class="stat-label">Present</span>
+      <span class="stat-value" id="presentCount" style="color:#276749">—</span>
+      <span class="stat-sub">≥ 75 % attendance</span>
+    </div>
+    <div class="stat-box">
+      <span class="stat-label">Partial / Absent</span>
+      <span class="stat-value" id="otherCount" style="color:#c05621">—</span>
+      <span class="stat-sub">below threshold</span>
+    </div>
+  </div>
+
+  <!-- ---- Attendance table ---- -->
+  <div class="card">
+    <div class="card-title">Attendance Report</div>
+    <div id="tableContainer">
+      <div class="empty-state">
+        <p>Select a session above and click <strong>Load Report</strong>.</p>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>WiFi Attendance System &mdash; privacy-first design &mdash; no IP/MAC stored</footer>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- =========================================================
+     JAVASCRIPT
+========================================================== -->
+<script>
+  "use strict";
+
+  let currentSessionId = null;
+  let occupancyInterval = null;
+
+  // ---- utilities -------------------------------------------------------
+
+  function showToast(msg, duration = 2500) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(() => t.classList.remove("show"), duration);
+  }
+
+  function setLoading(container) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="spinner"></div>
+        <p>Loading data…</p>
+      </div>`;
+  }
+
+  function badgeClass(status) {
+    if (status === "PRESENT") return "badge-present";
+    if (status === "PARTIAL") return "badge-partial";
+    return "badge-absent";
+  }
+
+  function fillClass(status) {
+    if (status === "PRESENT") return "fill-present";
+    if (status === "PARTIAL") return "fill-partial";
+    return "fill-absent";
+  }
+
+  // ---- Load report -----------------------------------------------------
+
+  async function loadReport() {
+    const sel = document.getElementById("sessionSelect");
+    const sid = sel.value;
+    if (!sid) { showToast("Please select a session first."); return; }
+
+    currentSessionId = sid;
+    const container = document.getElementById("tableContainer");
+    setLoading(container);
+
+    // Stop previous occupancy polling
+    if (occupancyInterval) clearInterval(occupancyInterval);
+
+    try {
+      const resp = await fetch(`/report/${sid}`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const data = await resp.json();
+
+      renderTable(container, data);
+      renderStats(data);
+      document.getElementById("statsStrip").style.display = "flex";
+      document.getElementById("csvBtn").disabled = false;
+
+      // Start occupancy polling
+      fetchOccupancy(sid);
+      occupancyInterval = setInterval(() => fetchOccupancy(sid), 10_000);
+
+    } catch (err) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <p style="color:#e53e3e">Error loading report: ${err.message}</p>
+        </div>`;
+      showToast("Failed to load report.");
+    }
+  }
+
+  // ---- Render table ----------------------------------------------------
+
+  function renderTable(container, data) {
+    if (!data || data.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <p>No attendance records found for this session yet.</p>
+        </div>`;
+      return;
+    }
+
+    let rows = "";
+    for (const r of data) {
+      const pct = Math.min(100, Math.max(0, r.percentage));
+      rows += `
+        <tr class="${r.status}">
+          <td>${escHtml(r.student_id)}</td>
+          <td>${escHtml(r.name)}</td>
+          <td>
+            <span class="badge ${badgeClass(r.status)}">${r.status}</span>
+          </td>
+          <td>${r.duration_minutes} min</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:.5rem">
+              <div class="progress-bar-wrap">
+                <div class="progress-bar-fill ${fillClass(r.status)}"
+                     style="width:${pct}%"></div>
+              </div>
+              <span>${r.percentage.toFixed(1)}%</span>
+            </div>
+          </td>
+        </tr>`;
+    }
+
+    container.innerHTML = `
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Student ID</th>
+              <th>Name</th>
+              <th>Status</th>
+              <th>Duration</th>
+              <th>Attendance %</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  }
+
+  // ---- Stats strip -----------------------------------------------------
+
+  function renderStats(data) {
+    const total   = data.length;
+    const present = data.filter(r => r.status === "PRESENT").length;
+    const other   = total - present;
+    document.getElementById("totalCount").textContent   = total;
+    document.getElementById("presentCount").textContent = present;
+    document.getElementById("otherCount").textContent   = other;
+  }
+
+  // ---- Live occupancy --------------------------------------------------
+
+  async function fetchOccupancy(sid) {
+    try {
+      const resp = await fetch(`/occupancy/${sid}`);
+      if (!resp.ok) return;
+      const data = await resp.json();
+      document.getElementById("liveCount").textContent = data.count;
+    } catch (_) { /* ignore transient errors */ }
+  }
+
+  // ---- Export CSV ------------------------------------------------------
+
+  function exportCSV() {
+    if (!currentSessionId) return;
+    const url = `/report/${currentSessionId}/csv`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    showToast("CSV download started.");
+  }
+
+  // ---- XSS helper ------------------------------------------------------
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  // ---- Auto-load first session on page load if available ---------------
+  window.addEventListener("DOMContentLoaded", () => {
+    const sel = document.getElementById("sessionSelect");
+    if (sel.value) loadReport();
+  });
+</script>
+</body>
+</html>

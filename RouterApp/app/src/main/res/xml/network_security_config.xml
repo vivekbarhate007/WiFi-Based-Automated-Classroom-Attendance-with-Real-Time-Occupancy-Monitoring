@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Allow cleartext HTTP throughout the app.
+
+  This app intentionally serves plain HTTP on the classroom WiFi
+  (NanoHTTPD on port 8080) so a student's browser can load the check-in
+  page without TLS certificates. The same exemption is needed for the
+  in-app self-test to reach its own server via HttpURLConnection;
+  Android 9+ blocks cleartext by default at the platform layer.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

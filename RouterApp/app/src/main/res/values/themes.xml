@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme -->
+    <style name="Theme.RouterApp" parent="Theme.MaterialComponents.Light.DarkActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorPrimaryVariant">@color/colorPrimaryDark</item>
+        <item name="colorOnPrimary">@color/colorOnPrimary</item>
+        <item name="colorSecondary">@color/colorSecondary</item>
+        <item name="colorSecondaryVariant">@color/colorSecondaryVariant</item>
+        <item name="colorOnSecondary">@color/white</item>
+        <item name="android:colorBackground">@color/colorBackground</item>
+        <item name="colorSurface">@color/colorSurface</item>
+        <item name="colorOnSurface">@color/colorOnSurface</item>
+        <item name="colorError">@color/colorError</item>
+        <item name="android:statusBarColor">@color/colorPrimaryDark</item>
+        <item name="android:navigationBarColor">@color/colorPrimary</item>
+    </style>
+
+    <!-- No ActionBar variant for full-screen activities -->
+    <style name="Theme.RouterApp.NoActionBar" parent="Theme.RouterApp">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <!-- Style for the large SSID display card -->
+    <style name="Widget.RouterApp.SsidCard" parent="Widget.MaterialComponents.CardView">
+        <item name="cardBackgroundColor">@color/colorPrimary</item>
+        <item name="cardCornerRadius">12dp</item>
+        <item name="cardElevation">4dp</item>
+    </style>
+
+    <!-- Style for the occupancy counter text -->
+    <style name="Widget.RouterApp.OccupancyText" parent="TextAppearance.MaterialComponents.Headline1">
+        <item name="android:textColor">@color/colorOccupancyNumber</item>
+        <item name="android:textSize">72sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <!-- Style for large label text -->
+    <style name="Widget.RouterApp.LargeLabel" parent="TextAppearance.MaterialComponents.Subtitle1">
+        <item name="android:textColor">@color/colorTextSecondary</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:textAllCaps">true</item>
+        <item name="android:letterSpacing">0.1</item>
+    </style>
+
+    <!-- Style for report status badges -->
+    <style name="Widget.RouterApp.StatusBadge" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:paddingStart">8dp</item>
+        <item name="android:paddingEnd">8dp</item>
+        <item name="android:paddingTop">4dp</item>
+        <item name="android:paddingBottom">4dp</item>
+    </style>
+
+    <!-- Button styles -->
+    <style name="Widget.RouterApp.Button.Primary" parent="Widget.MaterialComponents.Button">
+        <item name="backgroundTint">@color/colorPrimary</item>
+        <item name="android:textColor">@color/white</item>
+    </style>
+
+    <style name="Widget.RouterApp.Button.Danger" parent="Widget.MaterialComponents.Button">
+        <item name="backgroundTint">@color/colorError</item>
+        <item name="android:textColor">@color/white</item>
+    </style>
+
+    <style name="Widget.RouterApp.Button.Secondary" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="strokeColor">@color/colorPrimary</item>
+        <item name="android:textColor">@color/colorPrimary</item>
+    </style>
+
+</resources>

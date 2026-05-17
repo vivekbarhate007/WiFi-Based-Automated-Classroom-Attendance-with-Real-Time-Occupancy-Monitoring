@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    VectorDrawable ONLY supports: <path>, <group>, <clip-path>
+    Circles must be drawn using the arc (A) command in a <path>
+    Circle at (cx, cy) radius r:  M cx-r,cy  A r,r 0 1,0 cx+r,cy  A r,r 0 1,0 cx-r,cy Z
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- WiFi arc — outer -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28 C37,28 22,36 14,49 L21,56 C27,45 40,38 54,38 C68,38 81,45 87,56 L94,49 C86,36 71,28 54,28 Z" />
+
+    <!-- WiFi arc — middle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,43 C42,43 32,49 26,58 L33,64 C37,58 45,53 54,53 C63,53 71,58 75,64 L82,58 C76,49 66,43 54,43 Z" />
+
+    <!-- WiFi dot — circle drawn as path: center (54,71) radius 6 -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M48,71 A6,6 0 1,0 60,71 A6,6 0 1,0 48,71 Z" />
+
+</vector>

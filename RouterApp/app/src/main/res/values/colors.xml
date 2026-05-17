@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary blue palette -->
+    <color name="colorPrimary">#1565C0</color>
+    <color name="colorPrimaryDark">#003c8f</color>
+    <color name="colorPrimaryLight">#5e92f3</color>
+    <color name="colorOnPrimary">#FFFFFF</color>
+
+    <!-- Accent / secondary -->
+    <color name="colorAccent">#00ACC1</color>
+    <color name="colorSecondary">#0288D1</color>
+    <color name="colorSecondaryVariant">#01579B</color>
+
+    <!-- Background and surface -->
+    <color name="colorBackground">#F5F7FA</color>
+    <color name="colorSurface">#FFFFFF</color>
+    <color name="colorOnSurface">#212121</color>
+
+    <!-- Status colors -->
+    <color name="colorPresent">#1B5E20</color>
+    <color name="colorPartial">#E65100</color>
+    <color name="colorAbsent">#B71C1C</color>
+
+    <!-- Occupancy counter -->
+    <color name="colorOccupancyNumber">#1565C0</color>
+
+    <!-- Text -->
+    <color name="colorTextPrimary">#212121</color>
+    <color name="colorTextSecondary">#757575</color>
+    <color name="colorTextHint">#BDBDBD</color>
+
+    <!-- Divider and outline -->
+    <color name="colorDivider">#E0E0E0</color>
+    <color name="colorOutline">#BDBDBD</color>
+
+    <!-- SSID display (large, for students to read) -->
+    <color name="colorSsidText">#1565C0</color>
+    <color name="colorPasswordText">#D32F2F</color>
+
+    <!-- Card background -->
+    <color name="colorCardBackground">#FFFFFF</color>
+    <color name="colorCardElevation">#E8EAF6</color>
+
+    <!-- Notification / info bar -->
+    <color name="colorInfo">#0288D1</color>
+    <color name="colorWarning">#F57C00</color>
+    <color name="colorError">#C62828</color>
+    <color name="colorSuccess">#2E7D32</color>
+
+    <!-- White and black -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+</resources>
